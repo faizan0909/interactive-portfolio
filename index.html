@@ -1,0 +1,2272 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Faizan — Visual Director & Editor</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap"
+    rel="stylesheet">
+  <style>
+    *,
+    *::before,
+    *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    /* DYNAMIC CSS LUTS (THEMES) */
+    :root {
+      --bg: #070708;
+      --card-bg: #0e0e11;
+      --white: #FFFFFF;
+      --accent: #D4A373;
+      --accent-rgb: 212, 163, 115;
+      --muted: #8E8E93;
+      --line: rgba(255, 255, 255, 0.07);
+      --grain-opacity: 0.04;
+      --font-mono: 'Space Mono', monospace;
+      --glow-opacity: 0.15;
+    }
+
+    /* LUT PRESET: S-LOG FLAT */
+    [data-lut="slog"] {
+      --bg: #2b2b2b;
+      --card-bg: #323232;
+      --white: #d5d5d5;
+      --accent: #9a9a9a;
+      --accent-rgb: 154, 154, 154;
+      --muted: #7c7c7c;
+      --line: rgba(255, 255, 255, 0.04);
+      --grain-opacity: 0.02;
+      --glow-opacity: 0;
+    }
+
+    /* LUT PRESET: NEON CYBERPUNK */
+    [data-lut="cyber"] {
+      --bg: #050409;
+      --card-bg: #0b0914;
+      --white: #f0f2ff;
+      --accent: #00f2fe;
+      --accent-rgb: 0, 242, 254;
+      --muted: #766f91;
+      --line: rgba(0, 242, 254, 0.08);
+      --grain-opacity: 0.055;
+      --glow-opacity: 0.4;
+    }
+
+    /* LUT PRESET: NOIR */
+    [data-lut="noir"] {
+      --bg: #000000;
+      --card-bg: #090909;
+      --white: #eeeeee;
+      --accent: #ffffff;
+      --accent-rgb: 255, 255, 255;
+      --muted: #666666;
+      --line: rgba(255, 255, 255, 0.05);
+      --grain-opacity: 0.06;
+      --glow-opacity: 0.1;
+    }
+
+    /* LUT PRESET: FOREST GOLD */
+    [data-lut="forest"] {
+      --bg: #060a07;
+      --card-bg: #0c120f;
+      --white: #e9edea;
+      --accent: #E6C229;
+      --accent-rgb: 230, 194, 41;
+      --muted: #7d8e82;
+      --line: rgba(230, 194, 41, 0.08);
+      --grain-opacity: 0.03;
+      --glow-opacity: 0.2;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--white);
+      font-family: 'Montserrat', sans-serif;
+      overflow-x: hidden;
+      cursor: none;
+      transition: background 0.4s ease, color 0.4s ease;
+    }
+
+    /* GRAIN OVERLAY */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+      opacity: var(--grain-opacity);
+      pointer-events: none;
+      z-index: 9000;
+      mix-blend-mode: overlay;
+      transition: opacity 0.4s ease;
+    }
+
+    /* CUSTOM CURSOR */
+    .cursor {
+      width: 6px;
+      height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      position: fixed;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      transition: transform 0.05s ease, background 0.4s ease;
+    }
+
+    .cursor-ring {
+      width: 32px;
+      height: 32px;
+      border: 1px solid rgba(var(--accent-rgb), 0.5);
+      border-radius: 50%;
+      position: fixed;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+      z-index: 9998;
+      transform: translate(-50%, -50%);
+      transition: border 0.4s ease, width 0.25s cubic-bezier(0.1, 0.8, 0.3, 1), height 0.25s cubic-bezier(0.1, 0.8, 0.3, 1);
+    }
+
+    /* FILM STRIP */
+    .film-strip {
+      position: fixed;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 24px;
+      background: #000;
+      border-right: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      z-index: 99;
+      overflow: hidden;
+    }
+
+    .film-perf {
+      width: 11px;
+      height: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 1px;
+      flex-shrink: 0;
+      margin: 4px 0;
+    }
+
+    .film-strip-right {
+      position: fixed;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 24px;
+      background: #000;
+      border-left: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      z-index: 99;
+      overflow: hidden;
+    }
+
+    /* MAIN CONTENT AREA */
+    .page {
+      margin: 0 24px;
+      min-height: 100vh;
+      position: relative;
+      z-index: 5;
+    }
+
+    .divider {
+      width: 100%;
+      height: 1px;
+      background: var(--line);
+      margin: 0;
+    }
+
+    /* LUT & AUDIO GLOBAL CONTROL PANEL */
+    .studio-dashboard {
+      background: rgba(var(--card-bg), 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--line);
+      padding: 0.6rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 200;
+    }
+
+    .dashboard-label {
+      font-size: 9px;
+      font-family: var(--font-mono);
+      color: var(--accent);
+      letter-spacing: 0.15em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-transform: uppercase;
+    }
+
+    .dashboard-pulse {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+    }
+
+    .lut-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .lut-btn {
+      background: transparent;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      padding: 5px 12px;
+      border-radius: 4px;
+      cursor: none;
+      transition: all 0.2s ease;
+    }
+
+    .lut-btn:hover,
+    .lut-btn.active {
+      color: var(--white);
+      border-color: var(--accent);
+      background: rgba(var(--accent-rgb), 0.05);
+    }
+
+    .sound-toggle-btn {
+      background: transparent;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 11px;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      cursor: none;
+      transition: all 0.2s ease;
+    }
+
+    .sound-toggle-btn.muted {
+      text-decoration: line-through;
+      opacity: 0.6;
+    }
+
+    .sound-toggle-btn.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.2);
+    }
+
+    /* === HERO === */
+    .hero {
+      min-height: calc(100vh - 45px);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 3rem 3rem 4rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-bg-text {
+      position: absolute;
+      top: 45%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(120px, 24vw, 360px);
+      color: rgba(var(--accent-rgb), 0.02);
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+      user-select: none;
+      pointer-events: none;
+      line-height: 0.8;
+      z-index: 1;
+      transition: color 0.4s ease;
+    }
+
+    .hero-label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.35em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+      z-index: 2;
+      opacity: 0;
+      transform: translateY(20px);
+      animation: fadeUp 0.8s ease 0.1s forwards;
+    }
+
+    .hero-name {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(75px, 15vw, 190px);
+      line-height: 0.85;
+      letter-spacing: -0.01em;
+      margin-bottom: 1.5rem;
+      z-index: 2;
+      opacity: 0;
+      transform: translateY(30px);
+      animation: fadeUp 0.9s cubic-bezier(0.1, 0.8, 0.3, 1) 0.3s forwards;
+    }
+
+    .hero-name span {
+      color: var(--accent);
+      display: block;
+      text-shadow: 0 0 20px rgba(var(--accent-rgb), var(--glow-opacity));
+      transition: text-shadow 0.4s ease, color 0.4s ease;
+    }
+
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 3rem;
+      margin-top: 1rem;
+      z-index: 2;
+      opacity: 0;
+      animation: fadeUp 0.8s ease 0.5s forwards;
+    }
+
+    .hero-meta-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .hero-meta-label {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.25em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .hero-meta-val {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--white);
+    }
+
+    .hero-tagline {
+      position: absolute;
+      bottom: 4rem;
+      right: 3rem;
+      font-size: 12px;
+      font-weight: 300;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      max-width: 320px;
+      text-align: right;
+      line-height: 1.8;
+      z-index: 2;
+      opacity: 0;
+      animation: fadeUp 0.8s ease 0.7s forwards;
+    }
+
+    .hero-scroll {
+      position: absolute;
+      right: 3rem;
+      top: 40%;
+      transform: translateY(-50%) rotate(90deg);
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.3em;
+      color: var(--muted);
+      text-transform: uppercase;
+      transform-origin: right center;
+      opacity: 0;
+      animation: fadeIn 1s ease 1s forwards;
+    }
+
+    .hero-scroll::before {
+      content: '';
+      display: inline-block;
+      width: 40px;
+      height: 1px;
+      background: var(--muted);
+      vertical-align: middle;
+      margin-right: 12px;
+    }
+
+    @keyframes fadeUp {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeIn {
+      to {
+        opacity: 1;
+      }
+    }
+
+    /* === SECTION HEADERS === */
+    .section-header {
+      padding: 6rem 3rem 3rem;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 2rem;
+    }
+
+    .section-num {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 100px;
+      line-height: 0.8;
+      color: rgba(var(--accent-rgb), 0.05);
+      letter-spacing: -0.02em;
+      user-select: none;
+      transition: color 0.4s ease;
+    }
+
+    .section-title-block {}
+
+    .section-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.3em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+
+    .section-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(48px, 8vw, 95px);
+      letter-spacing: -0.01em;
+      line-height: 0.9;
+    }
+
+    /* === SERVICES === */
+    .services-grid {
+      padding: 0 3rem 6rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    .service-card {
+      background: var(--card-bg);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 3rem 2.5rem;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: background 0.4s ease, border-color 0.4s ease, transform 0.3s cubic-bezier(0.1, 0.8, 0.3, 1);
+    }
+
+    .service-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.04) 0%, transparent 60%);
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+
+    .service-card:hover {
+      border-color: rgba(var(--accent-rgb), 0.4);
+      transform: translateY(-4px);
+    }
+
+    .service-card:hover::before {
+      opacity: 1;
+    }
+
+    .service-card.full-width {
+      grid-column: 1 / -1;
+    }
+
+    .service-tag {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.3em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .service-tag::before {
+      content: '';
+      display: inline-block;
+      width: 20px;
+      height: 1px;
+      background: var(--accent);
+    }
+
+    .service-name {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 42px;
+      letter-spacing: 0.02em;
+      line-height: 1.0;
+      margin-bottom: 0.75rem;
+    }
+
+    .service-rate {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 1.5rem;
+      letter-spacing: -0.01em;
+    }
+
+    .service-rate span {
+      font-size: 11px;
+      font-weight: 400;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+      display: block;
+      margin-top: 2px;
+    }
+
+    .service-includes {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .service-includes li {
+      font-size: 12px;
+      color: var(--muted);
+      padding-left: 18px;
+      position: relative;
+      line-height: 1.6;
+    }
+
+    .service-includes li::before {
+      content: '—';
+      position: absolute;
+      left: 0;
+      color: rgba(var(--accent-rgb), 0.5);
+      font-size: 11px;
+    }
+
+    .service-note {
+      font-size: 11px;
+      color: rgba(var(--white), 0.4);
+      margin-top: auto;
+      font-style: italic;
+      line-height: 1.6;
+    }
+
+    /* === COLOR GRADING SECTION === */
+    .grading-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--line);
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 6rem;
+    }
+
+    .grading-col {
+      background: var(--bg);
+      padding: 3rem 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      transition: background 0.4s;
+    }
+
+    .grading-col:hover {
+      background: rgba(var(--card-bg), 0.5);
+    }
+
+    .grading-col-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 34px;
+      letter-spacing: 0.02em;
+      line-height: 1.0;
+    }
+
+    .grading-tiers {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      background: var(--line);
+      border: 1px solid var(--line);
+    }
+
+    .grading-tier {
+      padding: 1rem 1.25rem;
+      background: var(--bg);
+      transition: background 0.2s;
+    }
+
+    .grading-tier:hover {
+      background: var(--card-bg);
+    }
+
+    .grading-tier.featured {
+      background: rgba(var(--accent-rgb), 0.05);
+      border-left: 2px solid var(--accent);
+    }
+
+    .tier-label {
+      font-family: var(--font-mono);
+      font-size: 8px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .tier-rate {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--white);
+      letter-spacing: -0.01em;
+    }
+
+    .tier-rate span {
+      font-size: 11px;
+      font-weight: 400;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+      margin-left: 4px;
+    }
+
+    /* === DYNAMIC COST ESTIMATOR & PROJECT BRIEF BUILDER === */
+    .estimator-container {
+      padding: 0 3rem 6rem;
+    }
+
+    .estimator-layout {
+      display: grid;
+      grid-template-columns: 1.3fr 0.7fr;
+      gap: 3rem;
+    }
+
+    .estimator-form {
+      display: flex;
+      flex-direction: column;
+      gap: 2.5rem;
+    }
+
+    .estimator-panel {
+      background: var(--card-bg);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 2.5rem;
+      height: sticky;
+      top: 100px;
+    }
+
+    .estimator-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 32px;
+      letter-spacing: 0.02em;
+      margin-bottom: 1.5rem;
+    }
+
+    .estimator-item {
+      padding: 1.5rem;
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      cursor: none;
+      transition: all 0.2s;
+    }
+
+    .estimator-item.selected {
+      border-color: var(--accent);
+      background: rgba(var(--accent-rgb), 0.03);
+    }
+
+    .estimator-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .estimator-check {
+      width: 20px;
+      height: 20px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+      transition: all 0.2s;
+    }
+
+    .estimator-item.selected .estimator-check {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .estimator-item.selected .estimator-check::after {
+      content: '✓';
+      color: #000;
+      font-size: 11px;
+      font-weight: bold;
+    }
+
+    .estimator-label-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .estimator-label {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 24px;
+      letter-spacing: 0.03em;
+      color: var(--white);
+    }
+
+    .estimator-desc {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .estimator-slider-group {
+      margin-top: 1rem;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      border-top: 1px solid var(--line);
+      padding-top: 1rem;
+    }
+
+    .estimator-item.selected .estimator-slider-group {
+      display: flex;
+    }
+
+    .slider-header-calc {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--accent);
+    }
+
+    .estimator-range {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      background: var(--line);
+      outline: none;
+      border-radius: 2px;
+      cursor: none;
+    }
+
+    .estimator-range::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: none;
+      box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5);
+    }
+
+    /* Invoice Display */
+    .invoice-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5rem 0;
+    }
+
+    .invoice-row {
+      border-bottom: 1px solid var(--line);
+    }
+
+    .invoice-row td {
+      padding: 10px 0;
+      font-size: 12px;
+    }
+
+    .invoice-label {
+      color: var(--muted);
+    }
+
+    .invoice-price {
+      text-align: right;
+      font-family: var(--font-mono);
+      color: var(--white);
+    }
+
+    .total-row td {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 32px;
+      color: var(--accent);
+      border-top: 2px solid var(--accent);
+      padding-top: 15px;
+    }
+
+    .brief-btn {
+      width: 100%;
+      background: var(--accent);
+      color: #000;
+      border: none;
+      padding: 14px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 20px;
+      letter-spacing: 0.05em;
+      border-radius: 4px;
+      cursor: none;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .brief-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(var(--accent-rgb), 0.3);
+    }
+
+    /* Copy Dialog Custom Pop-up */
+    .copy-modal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.9);
+      background: var(--card-bg);
+      border: 1px solid var(--accent);
+      border-radius: 12px;
+      padding: 3rem;
+      z-index: 500;
+      width: 90%;
+      max-width: 550px;
+      box-shadow: 0 30px 70px rgba(0, 0, 0, 0.8);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.1, 0.8, 0.3, 1);
+    }
+
+    .copy-modal.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(8px);
+      z-index: 499;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 32px;
+      color: var(--accent);
+      margin-bottom: 1rem;
+    }
+
+    .modal-text {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 1.5rem;
+      line-height: 1.6;
+    }
+
+    .brief-textarea {
+      width: 100%;
+      height: 200px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: var(--white);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 1rem;
+      resize: none;
+      margin-bottom: 1.5rem;
+      outline: none;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 1rem;
+    }
+
+    .modal-btn {
+      flex-grow: 1;
+      padding: 12px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 18px;
+      border-radius: 4px;
+      cursor: none;
+      text-align: center;
+      border: none;
+    }
+
+    .modal-btn-copy {
+      background: var(--accent);
+      color: #000;
+    }
+
+    .modal-btn-close {
+      background: transparent;
+      border: 1px solid var(--line);
+      color: var(--white);
+    }
+
+    /* === PRODUCTION & EQUIPMENT === */
+    .production-section {
+      padding: 0 3rem 6rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: start;
+    }
+
+    .production-intro {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 2;
+      margin-bottom: 2.5rem;
+    }
+
+    .camera-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .camera-item {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      padding: 1.25rem 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .camera-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .camera-name {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 26px;
+      letter-spacing: 0.05em;
+    }
+
+    .equip-label {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.3em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+    }
+
+    .equip-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .equip-item {
+      font-size: 12px;
+      color: var(--muted);
+      padding: 1rem 1.25rem;
+      border: 1px solid var(--line);
+      border-left: 2px solid rgba(var(--accent-rgb), 0.3);
+      transition: all 0.2s ease;
+    }
+
+    .equip-item:hover {
+      border-left-color: var(--accent);
+      color: var(--white);
+      background: rgba(255, 255, 255, 0.01);
+    }
+
+    .software-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 2.5rem;
+    }
+
+    .software-pill {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border: 1px solid var(--line);
+      padding: 6px 14px;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .software-pill:hover {
+      border-color: rgba(var(--accent-rgb), 0.4);
+      color: var(--accent);
+    }
+
+    /* === TERMS === */
+    .terms-section {
+      padding: 5rem 3rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 3rem;
+    }
+
+    .term-block {}
+
+    .term-icon {
+      font-size: 24px;
+      color: var(--accent);
+      margin-bottom: 1rem;
+      display: block;
+      opacity: 0.8;
+    }
+
+    .term-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+    }
+
+    .term-body {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.8;
+    }
+
+    /* === FOOTER === */
+    .footer {
+      padding: 6rem 3rem 6rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid var(--line);
+    }
+
+    .footer-name {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(48px, 6vw, 85px);
+      letter-spacing: -0.01em;
+      line-height: 0.9;
+    }
+
+    .footer-name span {
+      color: var(--accent);
+    }
+
+    .footer-contact {
+      text-align: right;
+    }
+
+    .footer-label {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.3em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+
+    .footer-val {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 2.2;
+    }
+
+    .footer-avail {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 1rem;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      justify-content: flex-end;
+    }
+
+    .avail-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #4caf7a;
+      animation: pulse 2s ease infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.3;
+      }
+    }
+
+    /* === CINEMATIC ACCENT BAR === */
+    .accent-bar {
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--accent), var(--accent), transparent);
+      opacity: 0.6;
+      margin: 0;
+    }
+
+    /* === FULL-WIDTH STATEMENT === */
+    .statement {
+      padding: 8rem 3rem;
+      overflow: hidden;
+    }
+
+    .statement-text {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(45px, 8vw, 110px);
+      line-height: 0.95;
+      letter-spacing: -0.01em;
+      color: rgba(255, 255, 255, 0.85);
+    }
+
+    .statement-text em {
+      font-style: normal;
+      color: var(--accent);
+    }
+
+    /* SCROLL FADE-IN */
+    .fade-in {
+      opacity: 0;
+      transform: translateY(35px);
+      transition: opacity 0.8s cubic-bezier(0.1, 0.8, 0.3, 1), transform 0.8s cubic-bezier(0.1, 0.8, 0.3, 1);
+    }
+
+    .fade-in.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* RESPONSIVE BREAKPOINTS */
+    @media (max-width: 1024px) {
+      .estimator-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .grading-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .services-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .service-card.full-width {
+        grid-column: 1;
+      }
+
+      .production-section {
+        grid-template-columns: 1fr;
+        gap: 3rem;
+      }
+
+      .terms-section {
+        grid-template-columns: 1fr;
+        gap: 2.5rem;
+      }
+
+      .hero-name {
+        font-size: clamp(60px, 15vw, 130px);
+      }
+
+      .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+      }
+
+      .footer {
+        flex-direction: column;
+        gap: 2rem;
+        text-align: left;
+        align-items: flex-start;
+      }
+
+      .footer-contact {
+        text-align: left;
+      }
+
+      .footer-avail {
+        justify-content: flex-start;
+      }
+
+      .hero-scroll {
+        display: none;
+      }
+
+      .hero-tagline {
+        position: static;
+        margin-top: 2rem;
+        text-align: left;
+      }
+
+      .film-strip,
+      .film-strip-right {
+        width: 14px;
+      }
+
+      .film-perf {
+        width: 6px;
+        height: 5px;
+      }
+
+      .page {
+        margin: 0 14px;
+      }
+
+      .hero,
+      .section-header,
+      .services-grid,
+      .production-section,
+      .terms-section,
+      .footer,
+      .statement,
+      .simulator-container,
+      .workstation-container,
+      .estimator-container {
+        padding-left: 1.5rem;
+        padding-right: 1.5rem;
+      }
+
+      .grading-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .studio-dashboard {
+        padding: 0.6rem 1rem;
+        flex-direction: column;
+        gap: 0.5rem;
+        align-items: flex-start;
+      }
+
+      .lut-controls {
+        width: 100%;
+        overflow-x: auto;
+        padding-bottom: 2px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="cursor" id="cursor"></div>
+  <div class="cursor-ring" id="cursorRing"></div>
+
+  <!-- FILM STRIPS -->
+  <div class="film-strip" id="filmLeft"></div>
+  <div class="film-strip-right" id="filmRight"></div>
+
+  <div class="page">
+
+    <!-- LUT CONTROL PANEL -->
+    <div class="studio-dashboard">
+      <div class="dashboard-label">
+        <div class="dashboard-pulse"></div>
+        Faizan Studio Control Panel
+      </div>
+      <div class="lut-controls">
+        <button class="lut-btn active" data-lut-val="classic">LUT: Director's Cut</button>
+        <button class="lut-btn" data-lut-val="slog">LUT: S-Log3 RAW</button>
+        <button class="lut-btn" data-lut-val="cyber">LUT: Neon Cyberpunk</button>
+        <button class="lut-btn" data-lut-val="noir">LUT: Noir</button>
+        <button class="lut-btn" data-lut-val="forest">LUT: Forest Gold</button>
+        <button class="sound-toggle-btn muted" id="synthSoundBtn" title="Toggle System FX Sound">🔊</button>
+      </div>
+    </div>
+
+    <!-- HERO -->
+    <section class="hero">
+      <div class="hero-bg-text" id="lutLabel">CINEMATIC</div>
+      <div class="hero-label">Portfolio — Services — Production</div>
+      <h1 class="hero-name">
+        SAIYED<span>FAIZAN.</span>
+      </h1>
+      <div class="hero-meta">
+        <div class="hero-meta-item">
+          <span class="hero-meta-label">Experience</span>
+          <span class="hero-meta-val">4+ Years</span>
+        </div>
+        <div class="hero-meta-item">
+          <span class="hero-meta-label">Based in</span>
+          <span class="hero-meta-val">Delhi NCR</span>
+        </div>
+        <div class="hero-meta-item">
+          <span class="hero-meta-label">Availability</span>
+          <span class="hero-meta-val">Worldwide</span>
+        </div>
+      </div>
+      <p class="hero-tagline">Creating visuals that don't just look good — they command your attention.</p>
+      <div class="hero-scroll">Scroll to explore</div>
+    </section>
+
+    <div class="accent-bar"></div>
+    <div class="divider"></div>
+
+    <!-- STATEMENT -->
+    <section class="statement fade-in">
+      <p class="statement-text">
+        Video Editor.<br>
+        Photographer.<br>
+        <em>Videographer.</em>
+      </p>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- SERVICES -->
+    <div class="section-header fade-in">
+      <span class="section-num">03</span>
+      <div class="section-title-block">
+        <div class="section-eyebrow">What I offer</div>
+        <h2 class="section-title">SERVICES</h2>
+      </div>
+    </div>
+
+    <div class="services-grid">
+
+      <div class="service-card fade-in">
+        <div>
+          <div class="service-tag">Short-Form</div>
+          <div class="service-name">Reels & Shorts</div>
+          <div class="service-rate">₹1,000 – ₹2,000<span>per minute of final content</span></div>
+          <ul class="service-includes">
+            <li>Reels, Shorts, Instagram & Social Content</li>
+            <li>Motion graphics, premium captions & dynamic zooms</li>
+            <li>Cinematic sound design & beat sync</li>
+          </ul>
+        </div>
+        <p class="service-note">Minimum billing applicable. Pricing scales with complexity, effects, and turnaround.</p>
+      </div>
+
+      <div class="service-card fade-in">
+        <div>
+          <div class="service-tag">Long-Form</div>
+          <div class="service-name">Podcast Editing</div>
+          <div class="service-rate">₹8,000 – ₹10,000<span>per hour of final edited content</span></div>
+          <ul class="service-includes">
+            <li>Multi-camera editing, switching & layouts</li>
+            <li>Professional audio leveling, noise reduction & vocal sync</li>
+            <li>Intro/outro animations & lower-thirds branding</li>
+          </ul>
+        </div>
+        <p class="service-note">Charges are flexible based on long-term project volume.</p>
+      </div>
+
+      <div class="service-card fade-in" style="grid-column: 1 / -1; background: #0c0c0f;">
+        <div>
+          <div class="service-tag">Long-Form</div>
+          <div class="service-name">YouTube Video Editing</div>
+          <div class="service-rate">₹2,000 – ₹5,000<span>per minute of final content</span></div>
+          <ul class="service-includes" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px 2rem;">
+            <li>Vlogs, high-end travel documentaries, explanation edits</li>
+            <li>B-Roll transitions, pacing alignment, and storytelling optimization</li>
+            <li>Integrated graphic elements & custom lower thirds</li>
+            <li>Complimentary thumbnail layouts upon request</li>
+          </ul>
+        </div>
+        <p class="service-note">Highly negotiable for recurring contracts, consistent long-term YouTube channels, and
+          bulk orders.</p>
+      </div>
+
+      <div class="service-card full-width fade-in"
+        style="background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.1) 0%, #0d0d0f 100%);">
+        <div>
+          <div class="service-tag">Flagship Production</div>
+          <div class="service-name">Music Videos</div>
+          <div class="service-rate">₹25,000 – ₹30,000<span>full production package</span></div>
+          <ul class="service-includes" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px 2rem;">
+            <li>Pre-production scripting, treatment design, shooting</li>
+            <li>Full post-production timeline editing</li>
+            <li>Cinematic Color Grading customized to song energy</li>
+            <li>Dynamic transitions, stylized overlays & basic VFX work</li>
+          </ul>
+        </div>
+        <p class="service-note">Final quote based on physical locations, travel distances, crew size, and deliverables.
+        </p>
+      </div>
+
+      <div class="service-card fade-in">
+        <div>
+          <div class="service-tag">Photography</div>
+          <div class="service-name">Event Coverage</div>
+          <div class="service-rate">₹10,000<span>up to 8 hours · ₹1,000/hr after</span></div>
+          <ul class="service-includes">
+            <li>Complete RAW catalog delivered in high resolution</li>
+            <li>5 complimentary premium edited/color-graded master images</li>
+            <li>Ideal for corporate functions, live gigs, and private events</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="service-card fade-in">
+        <div>
+          <div class="service-tag">Videography</div>
+          <div class="service-name">Event Coverage</div>
+          <div class="service-rate">₹10,000<span>up to 8 hours · ₹1,000/hr after</span></div>
+          <ul class="service-includes">
+            <li>All raw camera clips organized and sent on drive</li>
+            <li>Covers conferences, club sets, live shows, product launches</li>
+            <li>Captured using cinematic camera setups & stabilized gimbals</li>
+          </ul>
+        </div>
+        <p class="service-note">Timeline montage editing is billed separately as an add-on.</p>
+      </div>
+
+      <div class="service-card fade-in">
+        <div>
+          <div class="service-tag">Commercial</div>
+          <div class="service-name">Product Shoot</div>
+          <div class="service-rate">From ₹2,000<span>per product setup</span></div>
+          <ul class="service-includes">
+            <li>Ultra-sharp high-resolution commercial images</li>
+            <li>Surgical retouching, background cleaning, and color grading</li>
+            <li>Optimized for e-commerce, catalogs, and brand campaigns</li>
+          </ul>
+        </div>
+        <p class="service-note">Adjustable based on volume of products and studio layout requirements.</p>
+      </div>
+
+      <div class="service-card fade-in" style="background: rgba(0,0,0,0.3);">
+        <div>
+          <div class="service-tag">Custom</div>
+          <div class="service-name">Videography — Bespoke</div>
+          <div class="service-rate" style="font-size:14px; letter-spacing: 0.1em; text-transform: uppercase;">Bespoke
+            Quotation</div>
+          <ul class="service-includes">
+            <li>Fully custom ad campaigns & corporate interviews</li>
+            <li>Collaborations with creative and talent directors</li>
+            <li>Specialized services: drone pilots, steadycam rigs</li>
+            <li>Flexible to scale to heavy commercial production</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- COLOR GRADING TIERS -->
+    <div class="section-header fade-in">
+      <span class="section-num">04</span>
+      <div class="section-title-block">
+        <div class="section-eyebrow">Standalone Post-Production</div>
+        <h2 class="section-title">Color Grading Packages</h2>
+      </div>
+    </div>
+
+    <div class="grading-section fade-in">
+      <div class="grading-grid">
+
+        <div class="grading-col">
+          <div>
+            <div class="service-tag" style="margin-bottom:0.75rem;">Photography</div>
+            <div class="grading-col-title">Photo Sets</div>
+          </div>
+          <div class="grading-tiers">
+            <div class="grading-tier">
+              <div class="tier-label">Basic Retouch</div>
+              <div class="tier-rate">₹50 – ₹100<span>/photo</span></div>
+            </div>
+            <div class="grading-tier">
+              <div class="tier-label">Professional Look</div>
+              <div class="tier-rate">₹150 – ₹400<span>/photo</span></div>
+            </div>
+            <div class="grading-tier featured">
+              <div class="tier-label">Cinematic Fine-Art</div>
+              <div class="tier-rate">₹500 – ₹1,500<span>/photo</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grading-col">
+          <div>
+            <div class="service-tag" style="margin-bottom:0.75rem;">Short-Form Video</div>
+            <div class="grading-col-title">Reels & Clips</div>
+          </div>
+          <div class="grading-tiers">
+            <div class="grading-tier">
+              <div class="tier-label">Basic Correction</div>
+              <div class="tier-rate">₹500 – ₹1,500<span>/reel</span></div>
+            </div>
+            <div class="grading-tier">
+              <div class="tier-label">Standard Grade</div>
+              <div class="tier-rate">₹2,000 – ₹5,000<span>/reel</span></div>
+            </div>
+            <div class="grading-tier featured">
+              <div class="tier-label">Premium Film Grade</div>
+              <div class="tier-rate">₹5,000 – ₹10,000<span>/reel</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grading-col">
+          <div>
+            <div class="service-tag" style="margin-bottom:0.75rem;">Music Video</div>
+            <div class="grading-col-title">Full Video Grade</div>
+          </div>
+          <div class="grading-tiers">
+            <div class="grading-tier">
+              <div class="tier-label">Indie Budget</div>
+              <div class="tier-rate">₹5,000 – ₹10,000</div>
+            </div>
+            <div class="grading-tier">
+              <div class="tier-label">Mid-Tier Project</div>
+              <div class="tier-rate">₹10,000 – ₹20,000</div>
+            </div>
+            <div class="grading-tier featured">
+              <div class="tier-label">Premium Cinematic</div>
+              <div class="tier-rate">₹20,000 – ₹50,000</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grading-col">
+          <div>
+            <div class="service-tag" style="margin-bottom:0.75rem;">Corporate / Ad</div>
+            <div class="grading-col-title">Commercial Film</div>
+          </div>
+          <div class="grading-tiers">
+            <div class="grading-tier">
+              <div class="tier-label">Per Final Minute</div>
+              <div class="tier-rate">₹3,000 – ₹8,000</div>
+            </div>
+            <div class="grading-tier featured">
+              <div class="tier-label">Complete Project</div>
+              <div class="tier-rate">₹10,000 – ₹50,000</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- DYNAMIC PROJECT ESTIMATOR & CALCULATOR -->
+    <div class="section-header fade-in">
+      <span class="section-num">05</span>
+      <div class="section-title-block">
+        <div class="section-eyebrow">Client Tool</div>
+        <h2 class="section-title">PROPOSAL ESTIMATOR</h2>
+      </div>
+    </div>
+
+    <div class="estimator-container fade-in">
+      <div class="estimator-layout">
+        <!-- Form Selection -->
+        <div class="estimator-form">
+          <p style="font-size: 13px; color: var(--muted); line-height: 1.8;">Select the visual services your project
+            requires to calculate an approximate overall production budget. Click items to toggle and adjust length.</p>
+
+          <!-- Short Form Reels -->
+          <div class="estimator-item" data-price-base="1500" data-type="multiplier" id="estShort">
+            <div class="estimator-head">
+              <div class="estimator-label-group">
+                <span class="estimator-label">Short-Form Content (Reels/Shorts)</span>
+                <span class="estimator-desc">High-retention social-ready edits</span>
+              </div>
+              <div class="estimator-check"></div>
+            </div>
+            <div class="estimator-slider-group">
+              <div class="slider-header-calc">
+                <span>Final length in minutes:</span>
+                <span id="shortMinLabel">3 Minutes</span>
+              </div>
+              <input type="range" min="1" max="15" value="3" class="estimator-range" id="shortMinRange">
+            </div>
+          </div>
+
+          <!-- Long Form YouTube -->
+          <div class="estimator-item" data-price-base="3500" data-type="multiplier" id="estLong">
+            <div class="estimator-head">
+              <div class="estimator-label-group">
+                <span class="estimator-label">YouTube Editing</span>
+                <span class="estimator-desc">Vlogs, documentaries, explainers</span>
+              </div>
+              <div class="estimator-check"></div>
+            </div>
+            <div class="estimator-slider-group">
+              <div class="slider-header-calc">
+                <span>Final length in minutes:</span>
+                <span id="longMinLabel">5 Minutes</span>
+              </div>
+              <input type="range" min="2" max="30" value="5" class="estimator-range" id="longMinRange">
+            </div>
+          </div>
+
+          <!-- Music Video package -->
+          <div class="estimator-item" data-price-fixed="27000" id="estMusicVideo">
+            <div class="estimator-head">
+              <div class="estimator-label-group">
+                <span class="estimator-label">Music Video Production Package</span>
+                <span class="estimator-desc">Complete shoot, edit, and color grade cycle</span>
+              </div>
+              <div class="estimator-check"></div>
+            </div>
+          </div>
+
+          <!-- Videography Event Coverage -->
+          <div class="estimator-item" data-price-base="10000" data-type="hours" id="estVideoEvent">
+            <div class="estimator-head">
+              <div class="estimator-label-group">
+                <span class="estimator-label">Videography (Event Coverage)</span>
+                <span class="estimator-desc">Stabilized high dynamic-range raw captures</span>
+              </div>
+              <div class="estimator-check"></div>
+            </div>
+            <div class="estimator-slider-group">
+              <div class="slider-header-calc">
+                <span>Coverage Time (Hours):</span>
+                <span id="videoEventHoursLabel">8 Hours</span>
+              </div>
+              <input type="range" min="2" max="24" value="8" class="estimator-range" id="videoEventHoursRange">
+            </div>
+          </div>
+
+          <!-- Color Grading Standalone -->
+          <div class="estimator-item" data-price-base="12000" data-type="multiplier" id="estGrading">
+            <div class="estimator-head">
+              <div class="estimator-label-group">
+                <span class="estimator-label">Standalone Color Grading (Professional)</span>
+                <span class="estimator-desc">Custom LUT development and timeline grade match</span>
+              </div>
+              <div class="estimator-check"></div>
+            </div>
+            <div class="estimator-slider-group">
+              <div class="slider-header-calc">
+                <span>Complexity Factor:</span>
+                <span id="gradeLevelLabel">Mid-Tier Standard</span>
+              </div>
+              <input type="range" min="1" max="3" value="2" class="estimator-range" id="gradeLevelRange">
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Interactive Quote -->
+        <div class="estimator-panel">
+          <div class="estimator-title">Estimated Cost Breakdown</div>
+          <div class="divider"></div>
+
+          <table class="invoice-table" id="invoiceTable">
+            <tbody id="invoiceEntries">
+              <tr class="invoice-row">
+                <td colspan="2" class="invoice-label" style="text-align: center; padding: 2rem 0;">No services selected
+                  yet.</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr class="total-row">
+                <td>Total</td>
+                <td class="invoice-price" id="invoiceTotalValue">₹0</td>
+              </tr>
+            </tfoot>
+          </table>
+
+          <button class="brief-btn" id="generateBriefBtn">Generate Project Brief</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- PRODUCTION KIT -->
+    <div class="section-header fade-in">
+      <span class="section-num">06</span>
+      <div class="section-title-block">
+        <div class="section-eyebrow">The Gear</div>
+        <h2 class="section-title">PRODUCTION</h2>
+      </div>
+    </div>
+
+    <div class="production-section">
+      <div class="production-left fade-in">
+        <p class="production-intro">I carefully structure physical camera packages according to client aesthetic goals
+          and specific project boundaries. Shoots can quickly scale from clean lightweight running setups to multi-cam
+          commercial formats with dedicated operators.</p>
+        <div class="camera-list">
+          <div class="camera-item">
+            <div class="camera-dot"></div>
+            <div class="camera-name">SONY A6400 (Compact B-Roll Setup)</div>
+          </div>
+          <div class="camera-item">
+            <div class="camera-dot"></div>
+            <div class="camera-name">SONY FX3 (Cinema line master)</div>
+          </div>
+          <div class="camera-item">
+            <div class="camera-dot"></div>
+            <div class="camera-name">SONY FX6 (High-End Broadcast Format)</div>
+          </div>
+        </div>
+        <div class="software-row">
+          <div class="software-pill">Premiere Pro</div>
+          <div class="software-pill">After Effects</div>
+          <div class="software-pill">Photoshop</div>
+          <div class="software-pill">Lightroom</div>
+          <div class="software-pill">DaVinci Resolve Studio</div>
+        </div>
+      </div>
+
+      <div class="production-right fade-in">
+        <div class="equip-label">Lenses & Supporting Hardware</div>
+        <div class="equip-list">
+          <div class="equip-item">High-speed Prime & Zoom Cinema Glass</div>
+          <div class="equip-item">DJI RS3 Pro Gimbal Systems</div>
+          <div class="equip-item">Aputure Professional COB Lighting Grid</div>
+          <div class="equip-item">Rode Multi-Channel Audio Gear</div>
+          <div class="equip-item">DJI 4K Drone Platforms (Regulatory Compliant)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- TERMS -->
+    <div class="section-header fade-in">
+      <span class="section-num">07</span>
+      <div class="section-title-block">
+        <div class="section-eyebrow">Before we work</div>
+        <h2 class="section-title">TERMS</h2>
+      </div>
+    </div>
+
+    <div class="terms-section">
+      <div class="term-block fade-in">
+        <span class="term-icon">◈</span>
+        <div class="term-title">Base Rates</div>
+        <p class="term-body">Listed values are starting estimations. Exact calculations depend on complex rendering
+          loads, turnaround limits, physical crew overheads, and distribution rights.</p>
+      </div>
+      <div class="term-block fade-in">
+        <span class="term-icon">◎</span>
+        <div class="term-title">Flexible Scope</div>
+        <p class="term-body">We are open to conversation. If you have an artistic direction and structured funding, we
+          can design a timeline that suits you. Long-term retainer contracts are available.</p>
+      </div>
+      <div class="term-block fade-in">
+        <span class="term-icon">◐</span>
+        <div class="term-title">Global Execution</div>
+        <p class="term-body">Based in Delhi NCR, India. Fully capable of traveling internationally for production sets
+          or receiving RAW footage drives globally for virtual editing workflows.</p>
+      </div>
+    </div>
+
+    <div class="accent-bar"></div>
+
+    <!-- FOOTER -->
+    <footer class="footer fade-in">
+      <div class="footer-name">FAIZAN<br><span>VISUALS.</span></div>
+      <div class="footer-contact">
+        <div class="footer-label">Get in touch</div>
+        <div class="footer-val">
+          <a href="mailto:s.faizan2001@gmail.com" style="color:var(--white);text-decoration:none;transition:color 0.2s"
+            onmouseover="this.style.color='var(--accent)'"
+            onmouseout="this.style.color='var(--white)'">s.faizan2001@gmail.com</a><br>
+          <a href="tel:+919829681385" style="color:var(--white);text-decoration:none;transition:color 0.2s"
+            onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--white)'">+91 98296
+            81385</a><br>
+          <a href="https://instagram.com/faizankacamera" target="_blank"
+            style="color:var(--white);text-decoration:none;transition:color 0.2s"
+            onmouseover="this.style.color='var(--accent)'"
+            onmouseout="this.style.color='var(--white)'">@faizankacamera</a>
+        </div>
+        <div class="footer-avail">
+          <div class="avail-dot"></div>
+          Available for bookings
+        </div>
+      </div>
+    </footer>
+
+  </div><!-- end .page -->
+
+  <!-- MODAL POPUP FOR BRIEF BUILDER -->
+  <div class="modal-overlay" id="briefOverlay"></div>
+  <div class="copy-modal" id="briefModal">
+    <div class="modal-title">Your Project Brief is Ready</div>
+    <p class="modal-text">Copy the compiled inquiry text below and email or message it to Faizan to initiate your
+      booking discussion.</p>
+    <textarea class="brief-textarea" id="briefTextOutput" readonly></textarea>
+    <div class="modal-actions">
+      <button class="modal-btn modal-btn-close" id="modalCloseBtn">Cancel</button>
+      <button class="modal-btn modal-btn-copy" id="modalCopyBtn">Copy to Clipboard</button>
+    </div>
+  </div>
+
+  <script>
+    // AUDIO SYNTHESIZER FOR SUBTLE CINEMATIC USER INTERACTION SOUNDS
+    class StudioSynth {
+      constructor() {
+        this.audioCtx = null;
+        this.isMuted = true;
+      }
+
+      init() {
+        if (!this.audioCtx) {
+          this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+      }
+
+      playWhoosh() {
+        if (this.isMuted) return;
+        this.init();
+        const osc = this.audioCtx.createOscillator();
+        const gain = this.audioCtx.createGain();
+        const filter = this.audioCtx.createBiquadFilter();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(80, this.audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(15, this.audioCtx.currentTime + 0.6);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(400, this.audioCtx.currentTime);
+        filter.frequency.exponentialRampToValueAtTime(80, this.audioCtx.currentTime + 0.6);
+
+        gain.gain.setValueAtTime(0.2, this.audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + 0.6);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.audioCtx.destination);
+
+        osc.start();
+        osc.stop(this.audioCtx.currentTime + 0.65);
+      }
+
+      playClick() {
+        if (this.isMuted) return;
+        this.init();
+        const osc = this.audioCtx.createOscillator();
+        const gain = this.audioCtx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(800, this.audioCtx.currentTime);
+        osc.frequency.setValueAtTime(400, this.audioCtx.currentTime + 0.05);
+
+        gain.gain.setValueAtTime(0.08, this.audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + 0.1);
+
+        osc.connect(gain);
+        gain.connect(this.audioCtx.destination);
+
+        osc.start();
+        osc.stop(this.audioCtx.currentTime + 0.12);
+      }
+
+      playSynthHum() {
+        if (this.isMuted) return;
+        this.init();
+        const osc = this.audioCtx.createOscillator();
+        const gain = this.audioCtx.createGain();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(55, this.audioCtx.currentTime);
+
+        gain.gain.setValueAtTime(0.12, this.audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + 0.5);
+
+        osc.connect(gain);
+        gain.connect(this.audioCtx.destination);
+
+        osc.start();
+        osc.stop(this.audioCtx.currentTime + 0.55);
+      }
+    }
+
+    const synth = new StudioSynth();
+
+    // Audio Toggle Controller
+    const synthSoundBtn = document.getElementById('synthSoundBtn');
+    synthSoundBtn.addEventListener('click', () => {
+      synth.isMuted = !synth.isMuted;
+      if (synth.isMuted) {
+        synthSoundBtn.classList.add('muted');
+        synthSoundBtn.classList.remove('active');
+      } else {
+        synthSoundBtn.classList.remove('muted');
+        synthSoundBtn.classList.add('active');
+        synth.playSynthHum();
+      }
+    });
+
+
+    // CURSOR SPRING INTERACTION
+    const cursor = document.getElementById('cursor');
+    const ring = document.getElementById('cursorRing');
+    let mx = 0, my = 0, rx = 0, ry = 0;
+
+    document.addEventListener('mousemove', e => {
+      mx = e.clientX; my = e.clientY;
+      cursor.style.left = mx + 'px';
+      cursor.style.top = my + 'px';
+    });
+
+    function animateRing() {
+      rx += (mx - rx) * 0.15;
+      ry += (my - ry) * 0.15;
+      ring.style.left = rx + 'px';
+      ring.style.top = ry + 'px';
+      requestAnimationFrame(animateRing);
+    }
+    animateRing();
+
+    // Dynamic Hover states for custom cursor
+    const cursorInteractiveSelectors = 'a, button, .service-card, .equip-item, .software-pill, .estimator-item, .lut-btn, .hud-btn, .tool-btn, .estimator-range';
+    document.querySelectorAll(cursorInteractiveSelectors).forEach(el => {
+      el.addEventListener('mouseenter', () => {
+        ring.style.width = '48px';
+        ring.style.height = '48px';
+        ring.style.borderColor = 'rgba(var(--accent-rgb), 0.9)';
+        ring.style.background = 'rgba(var(--accent-rgb), 0.05)';
+      });
+      el.addEventListener('mouseleave', () => {
+        ring.style.width = '32px';
+        ring.style.height = '32px';
+        ring.style.borderColor = 'rgba(var(--accent-rgb), 0.5)';
+        ring.style.background = 'transparent';
+      });
+      el.addEventListener('click', () => {
+        synth.playClick();
+      });
+    });
+
+
+    // LIVE WEBSITE GRADIENT "LUT" (THEME) CONTROLLER
+    const lutBtns = document.querySelectorAll('.lut-btn');
+    const bodyEl = document.body;
+    const lutLabel = document.getElementById('lutLabel');
+
+    lutBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const lutVal = btn.getAttribute('data-lut-val');
+
+        // Update buttons
+        lutBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        // Set attribute on body to trigger specific CSS variables
+        if (lutVal === 'classic') {
+          bodyEl.removeAttribute('data-lut');
+          lutLabel.textContent = 'CINEMATIC';
+        } else {
+          bodyEl.setAttribute('data-lut', lutVal);
+          lutLabel.textContent = lutVal.toUpperCase();
+        }
+
+        synth.playWhoosh();
+      });
+    });
+
+
+    // FILM STRIP AUTOMATED GENERATION
+    function fillFilm(el) {
+      const count = Math.ceil(window.innerHeight / 24) + 6;
+      el.innerHTML = '';
+      for (let i = 0; i < count; i++) {
+        const p = document.createElement('div');
+        p.className = 'film-perf';
+        el.appendChild(p);
+      }
+    }
+
+    const filmLeft = document.getElementById('filmLeft');
+    const filmRight = document.getElementById('filmRight');
+
+    fillFilm(filmLeft);
+    fillFilm(filmRight);
+
+    // Re-generate film strip on screen size shifts
+    window.addEventListener('resize', () => {
+      fillFilm(filmLeft);
+      fillFilm(filmRight);
+    });
+
+
+    // PROPOSAL CALCULATOR & BRIEF GENERATOR LOGIC
+    const estimatorItems = document.querySelectorAll('.estimator-item');
+    const invoiceEntries = document.getElementById('invoiceEntries');
+    const invoiceTotalValue = document.getElementById('invoiceTotalValue');
+
+    // Multiplier specific definitions
+    const shortMinRange = document.getElementById('shortMinRange');
+    const shortMinLabel = document.getElementById('shortMinLabel');
+    const longMinRange = document.getElementById('longMinRange');
+    const longMinLabel = document.getElementById('longMinLabel');
+    const videoEventHoursRange = document.getElementById('videoEventHoursRange');
+    const videoEventHoursLabel = document.getElementById('videoEventHoursLabel');
+    const gradeLevelRange = document.getElementById('gradeLevelRange');
+    const gradeLevelLabel = document.getElementById('gradeLevelLabel');
+
+    function calculateActiveProposal() {
+      let activeEntries = [];
+      let cumulativeSum = 0;
+
+      estimatorItems.forEach(item => {
+        if (!item.classList.contains('selected')) return;
+
+        const itemId = item.id;
+        let calculatedItemCost = 0;
+        let displayLabel = '';
+
+        if (itemId === 'estShort') {
+          const mins = parseInt(shortMinRange.value);
+          shortMinLabel.textContent = `${mins} Minute${mins > 1 ? 's' : ''}`;
+          calculatedItemCost = parseInt(item.getAttribute('data-price-base')) * mins;
+          displayLabel = `Short-Form Editing (${mins} mins)`;
+        }
+        else if (itemId === 'estLong') {
+          const mins = parseInt(longMinRange.value);
+          longMinLabel.textContent = `${mins} Minute${mins > 1 ? 's' : ''}`;
+          calculatedItemCost = parseInt(item.getAttribute('data-price-base')) * mins;
+          displayLabel = `YouTube Video Editing (${mins} mins)`;
+        }
+        else if (itemId === 'estMusicVideo') {
+          calculatedItemCost = parseInt(item.getAttribute('data-price-fixed'));
+          displayLabel = `Music Video Package (Complete Cycle)`;
+        }
+        else if (itemId === 'estVideoEvent') {
+          const hours = parseInt(videoEventHoursRange.value);
+          videoEventHoursLabel.textContent = `${hours} Hour${hours > 1 ? 's' : ''}`;
+
+          // Base rate is 10k for up to 8 hrs, + 1k/hr thereafter
+          const baseCoveragePrice = parseInt(item.getAttribute('data-price-base'));
+          if (hours <= 8) {
+            calculatedItemCost = baseCoveragePrice;
+          } else {
+            calculatedItemCost = baseCoveragePrice + ((hours - 8) * 1000);
+          }
+          displayLabel = `Event Videography Coverage (${hours} hrs)`;
+        }
+        else if (itemId === 'estGrading') {
+          const tier = parseInt(gradeLevelRange.value);
+          let tierLabelText = 'Basic Look';
+          let gradingMultiplier = 1;
+
+          if (tier === 1) {
+            tierLabelText = 'Basic Look & Balance';
+            gradingMultiplier = 0.5;
+          } else if (tier === 2) {
+            tierLabelText = 'Professional LUT Match';
+            gradingMultiplier = 1.0;
+          } else if (tier === 3) {
+            tierLabelText = 'Cinematic Master Grade';
+            gradingMultiplier = 2.5;
+          }
+
+          gradeLevelLabel.textContent = tierLabelText;
+          calculatedItemCost = Math.round(parseInt(item.getAttribute('data-price-base')) * gradingMultiplier);
+          displayLabel = `Standalone Grading (${tierLabelText})`;
+        }
+
+        cumulativeSum += calculatedItemCost;
+        activeEntries.push({ label: displayLabel, cost: calculatedItemCost });
+      });
+
+      // Redraw table rows dynamically
+      invoiceEntries.innerHTML = '';
+
+      if (activeEntries.length === 0) {
+        invoiceEntries.innerHTML = `<tr class="invoice-row"><td colspan="2" class="invoice-label" style="text-align: center; padding: 2rem 0;">No services selected yet.</td></tr>`;
+        invoiceTotalValue.textContent = `₹0`;
+      } else {
+        activeEntries.forEach(entry => {
+          const row = document.createElement('tr');
+          row.className = 'invoice-row';
+          row.innerHTML = `
+          <td class="invoice-label">${entry.label}</td>
+          <td class="invoice-price">₹${entry.cost.toLocaleString('en-IN')}</td>
+        `;
+          invoiceEntries.appendChild(row);
+        });
+        invoiceTotalValue.textContent = `₹${cumulativeSum.toLocaleString('en-IN')}`;
+      }
+    }
+
+    // Multiplier item click toggles selection
+    estimatorItems.forEach(item => {
+      // Detect item header clicks
+      const head = item.querySelector('.estimator-head') || item;
+      head.addEventListener('click', (e) => {
+        // Prevent click triggers from range slider dragging
+        if (e.target.tagName === 'INPUT') return;
+
+        item.classList.toggle('selected');
+        calculateActiveProposal();
+        synth.playClick();
+      });
+    });
+
+    // Track slide movements
+    const sliders = [shortMinRange, longMinRange, videoEventHoursRange, gradeLevelRange];
+    sliders.forEach(slider => {
+      slider.addEventListener('input', () => {
+        calculateActiveProposal();
+      });
+    });
+
+
+    // PROJECT BRIEF POPUP COMPILER
+    const generateBriefBtn = document.getElementById('generateBriefBtn');
+    const briefOverlay = document.getElementById('briefOverlay');
+    const briefModal = document.getElementById('briefModal');
+    const briefTextOutput = document.getElementById('briefTextOutput');
+    const modalCloseBtn = document.getElementById('modalCloseBtn');
+    const modalCopyBtn = document.getElementById('modalCopyBtn');
+
+    generateBriefBtn.addEventListener('click', () => {
+      let currentInquirySummary = 'PROJECT BRIEF ENQUIRY — FAIZAN VISUALS\n';
+      currentInquirySummary += '=============================================\n\n';
+      currentInquirySummary += 'Hello Faizan,\n';
+      currentInquirySummary += 'I have built a custom proposal package through your online workstation.\n';
+      currentInquirySummary += 'Here are the services I am interested in:\n\n';
+
+      let selectedAny = false;
+      let totalPrice = 0;
+
+      estimatorItems.forEach(item => {
+        if (!item.classList.contains('selected')) return;
+        selectedAny = true;
+
+        const itemId = item.id;
+        if (itemId === 'estShort') {
+          const mins = shortMinRange.value;
+          const price = parseInt(item.getAttribute('data-price-base')) * mins;
+          totalPrice += price;
+          currentInquirySummary += `• Short-Form Video Editing (${mins} mins) — Est: ₹${price.toLocaleString('en-IN')}\n`;
+        }
+        else if (itemId === 'estLong') {
+          const mins = longMinRange.value;
+          const price = parseInt(item.getAttribute('data-price-base')) * mins;
+          totalPrice += price;
+          currentInquirySummary += `• YouTube Video Editing (${mins} mins) — Est: ₹${price.toLocaleString('en-IN')}\n`;
+        }
+        else if (itemId === 'estMusicVideo') {
+          const price = parseInt(item.getAttribute('data-price-fixed'));
+          totalPrice += price;
+          currentInquirySummary += `• Music Video Production Package — Est: ₹${price.toLocaleString('en-IN')}\n`;
+        }
+        else if (itemId === 'estVideoEvent') {
+          const hours = videoEventHoursRange.value;
+          let price = 10000;
+          if (hours > 8) price += (hours - 8) * 1000;
+          totalPrice += price;
+          currentInquirySummary += `• Event Videography Coverage (${hours} hrs) — Est: ₹${price.toLocaleString('en-IN')}\n`;
+        }
+        else if (itemId === 'estGrading') {
+          const tier = gradeLevelRange.value;
+          let tierText = tier == 1 ? 'Basic' : tier == 2 ? 'Standard' : 'Cinematic';
+          let price = Math.round(parseInt(item.getAttribute('data-price-base')) * (tier == 1 ? 0.5 : tier == 2 ? 1.0 : 2.5));
+          totalPrice += price;
+          currentInquirySummary += `• Standalone Color Grading (Tier: ${tierText}) — Est: ₹${price.toLocaleString('en-IN')}\n`;
+        }
+      });
+
+      if (!selectedAny) {
+        currentInquirySummary += 'No specific standalone packages selected. I would like a custom creative workflow consultation.\n';
+      } else {
+        currentInquirySummary += `\nESTIMATED COMBINED QUOTE: ₹${totalPrice.toLocaleString('en-IN')}\n`;
+      }
+
+      currentInquirySummary += '\nLet me know your availability to discuss scheduling, artistic brief adjustments, and timeline steps!\n\n';
+      currentInquirySummary += 'Thank you!';
+
+      briefTextOutput.value = currentInquirySummary;
+
+      // Show modal pop-up overlay
+      briefOverlay.classList.add('active');
+      briefModal.classList.add('active');
+      synth.playWhoosh();
+    });
+
+    const closeModal = () => {
+      briefOverlay.classList.remove('active');
+      briefModal.classList.remove('active');
+      synth.playClick();
+    };
+
+    modalCloseBtn.addEventListener('click', closeModal);
+    briefOverlay.addEventListener('click', closeModal);
+
+    modalCopyBtn.addEventListener('click', () => {
+      briefTextOutput.select();
+      document.execCommand('copy');
+
+      modalCopyBtn.textContent = 'Copied Successfully!';
+      modalCopyBtn.style.background = '#4caf7a';
+      modalCopyBtn.style.color = '#fff';
+
+      setTimeout(() => {
+        modalCopyBtn.textContent = 'Copy to Clipboard';
+        modalCopyBtn.style.background = 'var(--accent)';
+        modalCopyBtn.style.color = '#000';
+        closeModal();
+      }, 1500);
+    });
+
+
+    // SCROLL REVEAL (FADE-IN ANIMATION)
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('visible');
+          obs.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.fade-in').forEach(el => obs.observe(el));
+  </script>
+</body>
+
+</html>
