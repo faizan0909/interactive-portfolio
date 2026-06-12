@@ -1927,16 +1927,22 @@
     const synth = new StudioSynth();
 
     // Audio Toggle Controller
+    const bgAudio = new Audio('assets/Nebula.mp3');
+    bgAudio.loop = true;
+    bgAudio.volume = 0.5;
+
     const synthSoundBtn = document.getElementById('synthSoundBtn');
     synthSoundBtn.addEventListener('click', () => {
       synth.isMuted = !synth.isMuted;
       if (synth.isMuted) {
         synthSoundBtn.classList.add('muted');
         synthSoundBtn.classList.remove('active');
+        bgAudio.pause();
       } else {
         synthSoundBtn.classList.remove('muted');
         synthSoundBtn.classList.add('active');
         synth.playSynthHum();
+        bgAudio.play().catch(e => console.log('Audio play failed:', e));
       }
     });
 
